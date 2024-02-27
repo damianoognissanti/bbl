@@ -408,3 +408,96 @@ if [ -z "${DISPLAY}" ] && [ $(tty) == "/dev/tty1" ]; then
   exec startx
 fi
 ```
+
+## Chapter 6 WiFi
+First install `wpa_supplicant` via home-manager when you are chrooted into your bbl-installation (so that you have an internet connection). 
+Now run 
+```
+wpa_passphrase YOUR_SSID > wpa.conf
+```
+Where YOUR_SSID is the "name" of your connection. You will be prompted for the password, so have it nearby.
+
+With the command `ip link` you can see the name of your wifi interface (it might be `wlan0`, `mlan0`, or something similar).
+
+To connect you run
+```
+wpa_supplicant -imlan0 -cwpa.conf &
+```
+as the root user, where you substitute mlan0 for the name of your wifi interface.
+
+Now you need an IP address. For this you can use the following script (remember to check that $BBLROOT is set before running this):
+```
+mkdir -p $BBLROOT/usr/share/udhcpc/
+cat <<EOF > $BBLROOT/usr/share/udhcpc/default.script 
+#!/bin/sh
+# udhcpc script edited by Tim Riker <Tim at Rikers.org>
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+RESOLV_CONF="/etc/resolv.conf"
+[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+[ -n "$subnet" ] && NETMASK="netmask $subnet"
+# return 0 if root is mounted on a network filesystem
+root_is_nfs() {
+	grep -qe '^/dev/root.*\(nfs\|smbfs\|ncp\|coda\) .*' /proc/mounts
+}
+have_bin_ip=0
+if [ -x /bin/ip ]; then
+  have_bin_ip=1
+fi
+case "$1" in
+	deconfig)
+		if ! root_is_nfs ; then
+                        if [ $have_bin_ip -eq 1 ]; then
+                                ip addr flush dev $interface
+                                ip link set dev $interface up
+                        else
+                                /sbin/ifconfig $interface 0.0.0.0
+                        fi
+		fi
+		;;
+
+	renew|bound)
+                if [ $have_bin_ip -eq 1 ]; then
+                        ip addr add dev $interface local $ip/$mask $BROADCAST
+                else
+                        /sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+                fi
+
+		if [ -n "$router" ] ; then
+			if ! root_is_nfs ; then
+                                if [ $have_bin_ip -eq 1 ]; then
+                                        while ip route del default 2>/dev/null ; do
+                                                :
+                                        done
+                                else
+                                        while route del default gw 0.0.0.0 dev $interface 2>/dev/null ; do
+                                                :
+                                        done
+                                fi
+			fi
+			metric=0
+			for i in $router ; do
+                                if [ $have_bin_ip -eq 1 ]; then
+                                        ip route add default via $i metric $((metric++))
+                                else
+                                        route add default gw $i dev $interface metric $((metric++)) 2>/dev/null
+                                fi
+			done
+		fi
+		echo -n > $RESOLV_CONF
+		[ -n "$domain" ] && echo search $domain >> $RESOLV_CONF
+		for i in $dns ; do
+			echo adding dns $i
+			echo nameserver $i >> $RESOLV_CONF
+		done
+		;;
+esac
+exit 0
+EOF
+
+
+```
+To receive an IP address you can now write
+```
+udhcpc -imlan0 /usr/share/udhcpc/default.script
+```
+Where again you have to change the interface name to match the one you got from `ip link`.
