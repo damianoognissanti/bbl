@@ -450,7 +450,7 @@ case "$1" in
                                 ip addr flush dev $interface
                                 ip link set dev $interface up
                         else
-                                /sbin/ifconfig $interface 0.0.0.0
+                                /bin/ifconfig $interface 0.0.0.0
                         fi
 		fi
 		;;
@@ -459,7 +459,7 @@ case "$1" in
                 if [ $have_bin_ip -eq 1 ]; then
                         ip addr add dev $interface local $ip/$mask $BROADCAST
                 else
-                        /sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+                        /bin/ifconfig $interface $ip $BROADCAST $NETMASK
                 fi
 
 		if [ -n "$router" ] ; then
