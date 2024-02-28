@@ -1,5 +1,8 @@
-# bbl
-### A busybox linux install
+# Busybox Linux - bbl
+### Because sometimes everything you need is a statically built busybox.
+
+TL;DR. Just for fun I tried to see how little was needed to boot into Linux. I compiled a kernel and a statically linked busybox and that was enough! 
+ 
 Remember, everything below is just a suggestion on how things can be done, adjust to your needs.
 And be careful before you type any command into the terminal. Try to learn what each command does before running it.
 
