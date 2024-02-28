@@ -259,9 +259,13 @@ USERNAME=bbl
 
 Make home available for user
 ```
-mkdir -m 0755 /nix && chown $USERNAME /nix
 chown $USERNAME -R /home/$USERNAME
 ```
+Create the `/nix` folder manually (since you don't have sudo) and give it correct permissions.
+```
+mkdir -m 0755 /nix && chown $USERNAME /nix
+```
+
 Set user password
 ```
 passwd $USERNAME
