@@ -6,6 +6,8 @@ TL;DR. Just for fun I tried to see how little was needed to boot into Linux. I c
 Remember, everything below is just a suggestion on how things can be done, adjust to your needs.
 And be careful before you type any command into the terminal. Try to learn what each command does before running it.
 
+![Screenshot of bbl](https://github.com/damianoognissanti/bbl/blob/main/bbl.png?raw=true)
+
 ## Chapter 1 Create partition and set some variables
 For this installation I use btrfs, since it's easy to create and delete subvolumes with it.
 
