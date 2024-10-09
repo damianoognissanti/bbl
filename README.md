@@ -159,7 +159,7 @@ EOF
 Now you must compile and install your own kernel. This is the hardest step in the entire installation! 
 Go to https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html and follow the steps there. 
 Before you do this though you must make sure you have all dependencies needed to compile your kernel installed: 
-https://github.com/damianoognissanti/bbl/blob/main
+https://www.kernel.org/doc/html/v4.13/process/changes.html
 
 What you basically need to do is:
 1) Download the source code of the kernel, extract it and enter the folder.
