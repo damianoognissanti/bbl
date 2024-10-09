@@ -18,6 +18,7 @@ BUILDNAME="bbl_$DATE"
 ```
 
 Set the bbl root directory. Remember, if you take a break and close the terminal the variables are gone, which means that if you, for example run `rm -rf $BBLROOT/usr` because you want to delete the `usr` folder in the bbl folder this will just read `rm -rf /usr` since `$BBLROOT` is empty, which means it will remove your `usr` folder. 
+
 Please note that I never tell you to `rm -rf $SOME_VARIABLE` in this document since it's bad practice!
 
 ```
@@ -75,28 +76,10 @@ Make su available for user account
 chmod +s su
 ```
 
-Download static bash, put it in /bin and test checksum
-```
-mkdir staticbash
-pushd staticbash
-BASHURL="http://ftp.us.debian.org/debian/pool/main/b/bash/bash-static_5.2.15-2+b2_amd64.deb"
-BASHSHASUM="ee9b003975406c46669cbdf1d75c237a2ebf5a5ec241c4c6fd7bda8c88d7e05c  bash-static.deb"
-wget $BASHURL -O bash-static.deb 
-echo "$BASHSHASUM" | sha256sum -c
-ar -x bash-static.deb
-tar xvf data.tar.xz
-chmod +x bin/bash-static
-mv bin/bash-static $BBLROOT/bin/bash
-rm -rf staticbash
-popd
-```
-
 Create /etc/inittab
-Please note this command:
-`::sysinit:/bin/modprobe mwifiex_pcie`
-This runs modprobe, which can be used to load kernel modules 
-Here it loads the kernel module mwifiex_pcie needed for my wifi card
-The lines with chmod and chown set the ownership of various important folders and files.
+Please note the line `::sysinit:/bin/modprobe mwifiex_pcie`
+This runs modprobe, which can be used to load kernel modules. In my case it loads the kernel module `mwifiex_pcie` needed for my wifi card (but you add these lines after Chapter 3 and 4 below).
+The lines with `chmod` and `chown` set the ownership of various important folders and files.
 ```
 cat <<EOF > $BBLROOT/etc/inittab
 tty1::respawn:/bin/getty 38400 tty1
@@ -138,13 +121,13 @@ EOF
 ```
 
 Run `cat $BBLROOT/etc/fstab` to see that the `UUID` variable has been inserted correctly on line 1.
+
 If you noticed that `/boot` isn't present in `/etc/fstab`, please note that you don't actually need to mount `/boot` to your bbl installation. You only need to have it mounted if you ever want to change kernel.
 
-Create the groups (the nixbld group is for the nix package manager). The first column is group and the last users taking part of that group.
+Create the groups. The first column is group and the last users taking part of that group.
 ```
 cat <<EOF > $BBLROOT/etc/group
 root:x:0:
-nixbld:x:1000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30
 tty:x:5:$USERNAME
 audio:x:11:$USERNAME
 video:x:12:$USERNAME
@@ -157,10 +140,89 @@ EOF
 
 Run `cat $BBLROOT/etc/group` to see that the `USERNAME` variable has been inserted correctly in the file.
 
-Create the file containing the users. No passwords are set yet.
+Create the file containing the users.
 ```
 cat <<EOF > $BBLROOT/etc/passwd
 root:x:0:0:root:/root:/bin/bash
+$USERNAME:x:1030:1030:Linux User,,,:/home/$USERNAME:/bin/sh
+EOF
+```
+Create a password for your user. The password is set to `bbl`. If you wish to change it you will either have to read about the shadow file or you run `passwd` after you login later.
+```
+cat <<EOF > $BBLROOT/etc/shadow
+$USERNAME:$y$j9T$82GPlTw.R0C2fLI4xWvZn.$u2mW6Ln/Qy8kxjMaNrpLvFTwQj54tlVd/u20UjYmzG/:20005::::::
+EOF
+
+```
+
+## Chapter 3 Kernel
+Now you must compile and install your own kernel. This is the hardest step in the entire installation! 
+Go to ![https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html](https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html) and follow the steps there. 
+Before you do this though you must make sure you have all dependencies needed to compile your kernel installed: 
+![https://github.com/damianoognissanti/bbl/blob/main](https://github.com/damianoognissanti/bbl/blob/main)
+What you basically need to do is:
+1) Download the source code of the kernel, extract it and enter the folder.
+2) Go to the part of the LFS-page stating "Be sure to enable/disable/set the following features or the system might not work correctly or boot at all" and do what it says.
+3) If you have an NVME SSD you have to enable it here (how to do this is mentioned on the LFS-page).
+4) If you use btrfs, like me, you have to enable it by going to `File systems  --->` in the `menuconfig` and setting it, i.e., making sure it says `<*> Btrfs filesystem`.
+5) You will have to enable other stuff such as sound, graphics, networking, etc. But you can recompile the kernel later and skip this step the first time you do this (if you keep your kernel folder you will only compile the parts you add and not the whole thing, so it won't take long).
+6) Run `make ARCH=x86_64 -jN` where N is the number of cores you wish to use for compilation.
+7) Run `make modules_install` and then move the folder `/lib/modules/KERNEL_VERSION` to `$BBLROOT/lib/modules`.
+8) Copy the compiled kernel `cp -iv arch/x86_64/boot/bzImage /boot/vmlinuz`
+9) Copy the System map `cp -iv System.map /boot/System.map`
+
+Create an entry in your bootloader. Here's an example if you use systemd-boot
+```
+cat <<EOF > /boot/loader/entries/bbl.conf
+title   BBL
+linux   /vmlinuz
+options root=$DRIVE rootflags=subvol=$BUILDNAME rw rootfstype=btrfs
+EOF
+```
+With this you should be able to reboot into your system!
+
+### Chapter 4 Firmware (optional)
+You will probably need firmware for your wifi card, sound, etc. and the easiest way to solve this is to grab every firmware you need from kernel.org using git
+```
+git clone depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+cp -a linux-firmware/* $BBLROOT/lib/firmware
+```
+But there is unfortunately more to this, so read this page: ![https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html](https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html) for more information.
+
+### Chapter 5 Bash (optional)
+I am used to bash and for some of the other optional steps bash is required, so here are steps to install bash.
+
+Download static bash, put it in /bin and test checksum
+```
+mkdir staticbash
+pushd staticbash
+BASHURL="http://ftp.us.debian.org/debian/pool/main/b/bash/bash-static_5.2.15-2+b2_amd64.deb"
+BASHSHASUM="ee9b003975406c46669cbdf1d75c237a2ebf5a5ec241c4c6fd7bda8c88d7e05c  bash-static.deb"
+wget $BASHURL -O bash-static.deb 
+echo "$BASHSHASUM" | sha256sum -c
+ar -x bash-static.deb
+tar xvf data.tar.xz
+chmod +x bin/bash-static
+mv bin/bash-static $BBLROOT/bin/bash
+rm -rf staticbash
+popd
+```
+
+## Chapter 6 Package manager (optional)
+First, you need to install bash (see previous chapter) and change `/bin/sh` to `/bin/bash` in `/etc/passwd` for your user for this to work!
+
+This configuration is also needed!
+```
+mkdir $BBLROOT/etc/nix
+cat <<EOF > $BBLROOT/etc/nix/nix.conf
+sandbox = false
+EOF
+
+cat <<EOF >> $BBLROOT/etc/passwd
+nixbld:x:1000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30
+EOF
+
+cat <<EOF >> $BBLROOT/etc/passwd
 nixbld1:x:1000:1000:Linux User,,,:/home/nixbld1:/bin/bash
 nixbld2:x:1001:1000:Linux User,,,:/home/nixbld2:/bin/bash
 nixbld3:x:1002:1000:Linux User,,,:/home/nixbld3:/bin/bash
@@ -191,60 +253,6 @@ nixbld27:x:1026:1000:Linux User,,,:/home/nixbld27:/bin/bash
 nixbld28:x:1027:1000:Linux User,,,:/home/nixbld28:/bin/bash
 nixbld29:x:1028:1000:Linux User,,,:/home/nixbld29:/bin/bash
 nixbld30:x:1029:1000:Linux User,,,:/home/nixbld30:/bin/bash
-$USERNAME:x:1030:1030:Linux User,,,:/home/$USERNAME:/bin/bash
-EOF
-```
-
-Please note that you can now, if you wish, use a `chroot` command (for example `arch-chroot` if you run an arch based distribution), or xchroot if you use void.
-If you don't have any of those commands you can also manually mount everything and then use `chroot`:
-```
-mount --rbind /dev $BBLROOT/dev
-mount --make-rslave $BBLROOT/dev
-mount -t proc /proc $BBLROOT/proc
-mount --rbind /sys $BBLROOT/sys
-mount --make-rslave $BBLROOT/sys
-mount --rbind /tmp $BBLROOT/tmp
-mount --bind /run $BBLROOT/run
-chroot $BUILDROOT /bin/bash
-```
-
-This command:
-```
-export PS1="(chroot) $PS1" 
-```
-will add "(chroot)" to the beginning of each line in your terminal, so that you remember that you are in the chrooted environment. It's not mandatory, but good practice.
-
-If you want to exit your chrooted environment, just type `exit`. The `(chroot)` text should now be gone.
-
-Since you mounted directories to `$BBLROOT/dev`, etc. you can't just type `umount $BBLROOT` when you wish to unmount the partition from the folder, you must use `unmount -R $BBLROOT` (where -R if for recursive).
-
-## Chapter 3 Kernel (optional)
-
-If you just wish to play around in the terminal via `chroot`, install a package manager, install some packages and call it a day, you can skip this step (but then you could have skipped a lot of steps above too...), but if you want to run this on bare metal you must now compile and Install your own kernel. You do this on your host machine, not inside your `chroot`.
-This is the hardest step in the entire installation. Go to https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html and follow the steps.
-
-Create an entry in your bootloader. Here's an example if you use systemd-boot
-```
-cat <<EOF > /boot/loader/entries/bbl.conf
-title   BBL
-linux   /vmlinuz-
-options root=PARTUUID=$PARTUUID rootflags=subvol=bbl_20240227_1207 rw rootfstype=btrfs i915.enable_psr=0
-EOF
-```
-
-You will probably need firmware for your wifi card, sound, etc. the easiest way to solve this is to grab every firmware you need from kernel.org using git
-```
-git clone depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-cp -a linux-firmware/* $BBLROOT/lib/firmware
-```
-
-## Chapter 4 Package manager
-
-This configuration is needed for nix work!
-```
-mkdir $BBLROOT/etc/nix
-cat <<EOF > $BBLROOT/etc/nix/nix.conf
-sandbox = false
 EOF
 ```
 
@@ -329,7 +337,7 @@ Apply the config, this will install the packages
 home-manager switch
 ```
 
-## Chapter 5 Xorg
+## Chapter 7 Xorg (optional)
 
 Here is a sample for a working Xorg
 ```
@@ -418,7 +426,7 @@ if [ -z "${DISPLAY}" ] && [ $(tty) == "/dev/tty1" ]; then
 fi
 ```
 
-## Chapter 6 WiFi
+## Chapter 8 WiFi (optional)
 First install `wpa_supplicant` via home-manager when you are chrooted into your bbl-installation (so that you have an internet connection). 
 Now run 
 ```
