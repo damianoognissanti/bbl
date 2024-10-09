@@ -157,9 +157,10 @@ EOF
 
 ## Chapter 3 Kernel
 Now you must compile and install your own kernel. This is the hardest step in the entire installation! 
-Go to ![https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html](https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html) and follow the steps there. 
+Go to https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html and follow the steps there. 
 Before you do this though you must make sure you have all dependencies needed to compile your kernel installed: 
-![https://github.com/damianoognissanti/bbl/blob/main](https://github.com/damianoognissanti/bbl/blob/main)
+https://github.com/damianoognissanti/bbl/blob/main
+
 What you basically need to do is:
 1) Download the source code of the kernel, extract it and enter the folder.
 2) Go to the part of the LFS-page stating "Be sure to enable/disable/set the following features or the system might not work correctly or boot at all" and do what it says.
@@ -187,7 +188,7 @@ You will probably need firmware for your wifi card, sound, etc. and the easiest 
 git clone depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
 cp -a linux-firmware/* $BBLROOT/lib/firmware
 ```
-But there is unfortunately more to this, so read this page: ![https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html](https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html) for more information.
+But there is unfortunately more to this, so read this page: https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html for more information.
 
 ### Chapter 5 Bash (optional)
 I am used to bash and for some of the other optional steps bash is required, so here are steps to install bash.
