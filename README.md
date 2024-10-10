@@ -168,6 +168,14 @@ EOF
 
 ```
 
+Add an environment file stating where to look for binaries
+```
+cat <<EOF > $BBLROOT/etc/environment
+PATH="/bin"
+EOF
+```
+If you wish to add more paths later you can just add new paths to the variable separating the values by colon, e.g. `PATH="/bin:/sbin:/usr/local/bin"`.
+
 If you wish to test your system now, before adding a kernel, you can use a `chroot` command (for example `arch-chroot` if you run an arch based distribution, or `xchroot` if you use void).
 
 If you don't have `arch-chroot` or `xchroot` present on your machine you can also manually mount everything and then use `chroot`:
@@ -182,6 +190,10 @@ mount --rbind /tmp $BBLROOT/tmp
 mount --bind /run $BBLROOT/run
 chroot $BUILDROOT /bin/bash
 ```
+You need to source your environment, otherwise running commands will just yield: `/bin/sh: ls: not found`.
+```
+source /etc/environment
+```
 
 This command:
 ```
@@ -194,7 +206,8 @@ If you want to exit your chrooted environment, just type `exit`. The `(chroot)` 
 Since you mounted directories to `$BBLROOT/dev`, etc. you can't just type `umount $BBLROOT` when you wish to unmount the partition from the folder, you must use `unmount -R $BBLROOT` (where -R if for recursive).
 
 ## Chapter 3 Kernel
-Now you must compile and install your own kernel. This is the hardest step in the entire installation! 
+Now you must compile and install your own kernel. This is the hardest step in the entire installation! This is also something you should do on the host and not in the chrooted environment since you need to install a bunch of dependencies to be able to compile the kernel.
+
 Go to https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.html and follow the steps there. 
 Before you do this though you must make sure you have all dependencies needed to compile your kernel installed: 
 https://www.kernel.org/doc/html/v4.13/process/changes.html
@@ -231,9 +244,9 @@ But there is unfortunately more to this, so read this page: https://www.linuxfro
 This is a bit tricky and you might have to add `modprobe` lines to the `inittab` file mentioned above for it to work (after you have downloaded the firmware to the correct folder and recompiled the kernel with the features added).
 
 ## Chapter 5 Bash (optional)
-I am used to bash and for some of the other optional steps (like installing nix) bash is required, so here are steps to install bash. This is more easily done on the host machine (the one you build bbl with before). If you have already rebooted into your bbl install and return to the host machine, please remember to mount everything once more and set variables such as `BBLROOT` again.
+I am used to bash and for some of the other optional steps (like installing nix) bash is required, so here are steps to install bash. Thi This is more easily done on the host machine (the one you build bbl with before). If you have already rebooted into your bbl install and return to the host machine, please remember to mount everything once more and set variables such as `BBLROOT` again.
 
-Download static bash, put it in `/bin` and test checksum
+Download static bash (do adjust the link and checksum if it's too old), put it in `/bin` and test checksum
 ```
 mkdir staticbash
 pushd staticbash
@@ -408,7 +421,7 @@ Also don't forget tools such as btrfs-progs (if you use btrfs), an editor, a win
 
 Since this install doesn't use libinput or libeudev we need Xorg drivers for the keyboard and mouse. Unfortunately the nix package won't build since these driver have been phased out.
 
-They still exist for Debian though, so let's grab them there.
+They still exist for Debian though (do adjust the links and checksums if they are too old), so let's grab them there.
 
 Change user to root (you will copy the files to folders which the regular user can't write to).
 ```
