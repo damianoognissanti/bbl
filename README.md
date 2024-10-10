@@ -4,12 +4,13 @@
 TL;DR. Just for fun I tried to see how little was needed to boot into Linux. I compiled a kernel and a statically linked busybox and that was enough! 
  
 Remember, everything below is just a suggestion on how things can be done, adjust to your needs.
-And be careful before you type any command into the terminal. Try to learn what each command does before running it.
+
+*And be careful before you type any command into the terminal. Try to learn what each command does before running it.*
 
 ![Screenshot of bbl](https://github.com/damianoognissanti/bbl/blob/main/bbl.png?raw=true)
 
 ## Chapter 1 Create partition and set some variables
-For this installation I use btrfs, since it's easy to create and delete subvolumes with it.
+In this example I use btrfs since it's easy to create and delete subvolumes with it, but you can certainly use ext4 or whatever file system you want.
 
 Create a unique name for the installation. I usually pick some prefix + date, like so:
 ```
@@ -17,7 +18,7 @@ DATE=$(date +"%Y%m%d_%H%M")
 BUILDNAME="bbl_$DATE"
 ```
 
-Set the bbl root directory. Remember, if you take a break and close the terminal the variables are gone, which means that if you, for example run `rm -rf $BBLROOT/usr` because you want to delete the `usr` folder in the bbl folder this will just read `rm -rf /usr` since `$BBLROOT` is empty, which means it will remove your `usr` folder. 
+Set the bbl root directory. Remember, if you take a break and close the terminal, or if you switch user (e.g. to root) the variables are gone, which means that if you, for example run `rm -rf $BBLROOT/usr` because you want to delete the `usr` folder in the bbl folder this will just read `rm -rf /usr` since `$BBLROOT` is empty, which means it will remove your `usr` folder. 
 
 Please note that I never tell you to `rm -rf $SOME_VARIABLE` in this document since it's bad practice!
 
@@ -25,11 +26,10 @@ Please note that I never tell you to `rm -rf $SOME_VARIABLE` in this document si
 BBLROOT="/mnt"
 ```
 
-Store the drive name and UUIDs. You get these values by typing `blkid` in a terminal and copying from the correct line. 
+Store the drive name and UUID in variables. You get these values by typing `blkid` in a terminal and copying the values from the correct line. 
 ```
 DRIVE="/dev/nvme0n1p2"
 UUID="abc1234d-a123-1234-abc1-12ab34c56789"
-PARTUUID="1abc23d4-1abc-1abc-12ab-a12345b123cd"
 ```
 
 Select a user name
@@ -37,7 +37,7 @@ Select a user name
 USERNAME="bbl"
 ```
 
-Create btrfs subvolumes
+Mount your drive in a folder called Mount and create btrfs subvolumes. Unmount the drive and mount the subvolume in the `$BBLROOT`-folder.
 ```
 mkdir -p Mount
 mount $DRIVE Mount
@@ -47,15 +47,15 @@ mount $DRIVE -osubvol=$BUILDNAME $BBLROOT
 ```
 
 ## Chapter 2 Create the base system
-Populate drive with folders needed for the install
+Populate subvolume with the folders needed for the install
 ```
 mkdir $BBLROOT/{bin,etc,dev,lib,root,home,sys,run,proc,tmp,mnt,var}
-mkdir $BBLROOT/lib/{modules,firmware,xorg}
+mkdir $BBLROOT/lib/modules
 mkdir $BBLROOT/home/$USERNAME
 mkdir $BBLROOT/var/log
 ```
 
-If you don't want to build it yourself you can download a static busybox build, and put it in /bin and test checksum
+Now you need to build a statically linked busybox binary. If you don't want to build it yourself, you can download a precompiled static busybox build.
 ```
 BUSYBOXURL="https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox"
 BUSYBOXSHASUM="6e123e7f3202a8c1e9b1f94d8941580a25135382b99e8d3e34fb858bba311348  busybox"
@@ -63,23 +63,27 @@ pushd $BBLROOT/bin/
 wget $BUSYBOXURL 
 echo "$BUSYBOXSHASUM" | sha256sum -c
 ```
-If the checksum is OK proceed to make it executable
+If the checksum is OK proceed to make it executable.
 ```
 chmod +x busybox
 ```
-Create a symbolic link for each busybox program
+Create a symbolic link for each busybox program.
 ```
 for prog in $(./busybox --list); do ln -s busybox $prog; done
 ```
-Make su available for user account
+Make su available for user account.
 ```
 chmod +s su
 ```
 
-Create /etc/inittab
-Please note the line `::sysinit:/bin/modprobe mwifiex_pcie`
-This runs modprobe, which can be used to load kernel modules. In my case it loads the kernel module `mwifiex_pcie` needed for my wifi card (but you add these lines after Chapter 3 and 4 below).
-The lines with `chmod` and `chown` set the ownership of various important folders and files.
+Now we need something that runs after the kernel, so let's create the file `/etc/inittab` and:
+1) populate it with tty (to get some terminals with a login)
+2) create some folders in `/dev` that will be populated
+3) mount everything in `fstab` (we will create it shortly)
+4) set hostname (we will create the hostname file shortly)
+5) load neccessary kernel modules with `modprobe` (we will install these shortly). `mwifiex_pcie` is the kernel module used for my wifi card.
+6) change permissions on certain folders and files to make input, video, etc. work (some of these are only neccessary if you wish to use Xorg).
+7) set commands for ctrl-alt-del and for shutdown.
 ```
 cat <<EOF > $BBLROOT/etc/inittab
 tty1::respawn:/bin/getty 38400 tty1
@@ -108,21 +112,29 @@ Create an fstab file. The first line is used to mount the bbl partition.
 The others are for various important mount points.
 ```
 cat <<EOF > $BBLROOT/etc/fstab
-UUID="$UUID" / btrfs rw,relatime,subvol=/$BUILDNAME 0 1
-proc           /proc          proc       nosuid,noexec,nodev 0     0
-sysfs          /sys           sysfs      nosuid,noexec,nodev 0     0
-devpts         /dev/pts       devpts     gid=5,mode=620      0     0
-tmpfs          /run           tmpfs      defaults            0     0
-devtmpfs       /dev           devtmpfs   mode=0755,nosuid    0     0
-tmpfs          /dev/shm       tmpfs      nosuid,nodev        0     0
-cgroup2        /sys/fs/cgroup cgroup2    nosuid,noexec,nodev 0     0
-efivarfs       /sys/firmware/efi/efivars efivarfs defaults   0     0
+UUID="$UUID" /              btrfs      rw,relatime,subvol=/$BUILDNAME 0     1
+proc                                        /proc          proc       nosuid,noexec,nodev            0     0
+sysfs                                       /sys           sysfs      nosuid,noexec,nodev            0     0
+devpts                                      /dev/pts       devpts     gid=5,mode=620                 0     0
+tmpfs                                       /run           tmpfs      defaults                       0     0
+devtmpfs                                    /dev           devtmpfs   mode=0755,nosuid               0     0
+tmpfs                                       /dev/shm       tmpfs      nosuid,nodev                   0     0
+cgroup2                                     /sys/fs/cgroup cgroup2    nosuid,noexec,nodev            0     0
+efivarfs                                    /sys/firmware/efi/efivars efivarfs defaults              0     0
 EOF
 ```
 
-Run `cat $BBLROOT/etc/fstab` to see that the `UUID` variable has been inserted correctly on line 1.
+Run `cat $BBLROOT/etc/fstab` to see that the `UUID` variable has been inserted correctly on line 1. When the UUID is in place the first line should be aligned with the others. If not you can just add spaces to make them aligned (not neccesary, just to make it more readable).
 
-If you noticed that `/boot` isn't present in `/etc/fstab`, please note that you don't actually need to mount `/boot` to your bbl installation. You only need to have it mounted if you ever want to change kernel.
+If you noticed that `/boot` isn't present in `/etc/fstab`, please note that you don't actually need to mount `/boot` to your bbl installation. You only need to have it mounted if you ever want to change kernel. You can add `/boot` yourself if it's important to you.
+
+Create the hostname file. This file just contains the hostname
+```
+cat <<EOF > $BBLROOT/etc/hostname
+busyboxlinux
+EOF
+
+```
 
 Create the groups. The first column is group and the last users taking part of that group.
 ```
@@ -147,13 +159,39 @@ root:x:0:0:root:/root:/bin/bash
 $USERNAME:x:1030:1030:Linux User,,,:/home/$USERNAME:/bin/sh
 EOF
 ```
-Create a password for your user. The password is set to `bbl`. If you wish to change it you will either have to read about the shadow file or you run `passwd` after you login later.
+Create a password for your user. The password to both `$USERNAME` and `root` is set to `bbl`. If you wish to change it you will either have to read about the shadow file or you run `passwd` after you login later.
 ```
 cat <<EOF > $BBLROOT/etc/shadow
+root:$y$j9T$82GPlTw.R0C2fLI4xWvZn.$u2mW6Ln/Qy8kxjMaNrpLvFTwQj54tlVd/u20UjYmzG/:20005::::::
 $USERNAME:$y$j9T$82GPlTw.R0C2fLI4xWvZn.$u2mW6Ln/Qy8kxjMaNrpLvFTwQj54tlVd/u20UjYmzG/:20005::::::
 EOF
 
 ```
+
+If you wish to test your system now, before adding a kernel, you can use a `chroot` command (for example `arch-chroot` if you run an arch based distribution, or `xchroot` if you use void).
+
+If you don't have `arch-chroot` or `xchroot` present on your machine you can also manually mount everything and then use `chroot`:
+
+```
+mount --rbind /dev $BBLROOT/dev
+mount --make-rslave $BBLROOT/dev
+mount -t proc /proc $BBLROOT/proc
+mount --rbind /sys $BBLROOT/sys
+mount --make-rslave $BBLROOT/sys
+mount --rbind /tmp $BBLROOT/tmp
+mount --bind /run $BBLROOT/run
+chroot $BUILDROOT /bin/bash
+```
+
+This command:
+```
+export PS1="(chroot) $PS1" 
+```
+will add "(chroot)" to the beginning of each line in your terminal, so that you remember that you are in the chrooted environment. It's not mandatory, but good practice.
+
+If you want to exit your chrooted environment, just type `exit`. The `(chroot)` text should now be gone.
+
+Since you mounted directories to `$BBLROOT/dev`, etc. you can't just type `umount $BBLROOT` when you wish to unmount the partition from the folder, you must use `unmount -R $BBLROOT` (where -R if for recursive).
 
 ## Chapter 3 Kernel
 Now you must compile and install your own kernel. This is the hardest step in the entire installation! 
@@ -161,10 +199,10 @@ Go to https://www.linuxfromscratch.org/lfs/view/development/chapter10/kernel.htm
 Before you do this though you must make sure you have all dependencies needed to compile your kernel installed: 
 https://www.kernel.org/doc/html/v4.13/process/changes.html
 
-What you basically need to do is:
-1) Download the source code of the kernel, extract it and enter the folder.
+What you need to do is basically:
+1) Download the source code from https://www.kernel.org, extract it and move into the folder.
 2) Go to the part of the LFS-page stating "Be sure to enable/disable/set the following features or the system might not work correctly or boot at all" and do what it says.
-3) If you have an NVME SSD you have to enable it here (how to do this is mentioned on the LFS-page).
+3) If you have an NVME SSD you have to enable it here (how this is done is mentioned on the LFS-page).
 4) If you use btrfs, like me, you have to enable it by going to `File systems  --->` in the `menuconfig` and setting it, i.e., making sure it says `<*> Btrfs filesystem`.
 5) You will have to enable other stuff such as sound, graphics, networking, etc. But you can recompile the kernel later and skip this step the first time you do this (if you keep your kernel folder you will only compile the parts you add and not the whole thing, so it won't take long).
 6) Run `make ARCH=x86_64 -jN` where N is the number of cores you wish to use for compilation.
@@ -172,7 +210,7 @@ What you basically need to do is:
 8) Copy the compiled kernel `cp -iv arch/x86_64/boot/bzImage /boot/vmlinuz`
 9) Copy the System map `cp -iv System.map /boot/System.map`
 
-Create an entry in your bootloader. Here's an example if you use systemd-boot
+Create an entry in your bootloader. Here's an example if you use systemd-boot (since that is what I have installed on my machine):
 ```
 cat <<EOF > /boot/loader/entries/bbl.conf
 title   BBL
@@ -182,18 +220,20 @@ EOF
 ```
 With this you should be able to reboot into your system!
 
-### Chapter 4 Firmware (optional)
+## Chapter 4 Firmware (optional)
 You will probably need firmware for your wifi card, sound, etc. and the easiest way to solve this is to grab every firmware you need from kernel.org using git
 ```
 git clone depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+mkdir $BBLROOT/lib/firmware
 cp -a linux-firmware/* $BBLROOT/lib/firmware
 ```
 But there is unfortunately more to this, so read this page: https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html for more information.
+This is a bit tricky and you might have to add `modprobe` lines to the `inittab` file mentioned above for it to work (after you have downloaded the firmware to the correct folder and recompiled the kernel with the features added).
 
-### Chapter 5 Bash (optional)
-I am used to bash and for some of the other optional steps bash is required, so here are steps to install bash.
+## Chapter 5 Bash (optional)
+I am used to bash and for some of the other optional steps (like installing nix) bash is required, so here are steps to install bash. This is more easily done on the host machine (the one you build bbl with before). If you have already rebooted into your bbl install and return to the host machine, please remember to mount everything once more and set variables such as `BBLROOT` again.
 
-Download static bash, put it in /bin and test checksum
+Download static bash, put it in `/bin` and test checksum
 ```
 mkdir staticbash
 pushd staticbash
@@ -210,16 +250,19 @@ popd
 ```
 
 ## Chapter 6 Package manager (optional)
-First, you need to install bash (see previous chapter) and change `/bin/sh` to `/bin/bash` in `/etc/passwd` for your user for this to work!
+First, you need to install bash (see previous chapter) and change `/bin/sh` to `/bin/bash` in `/etc/passwd` for this to work!
 
-This configuration is also needed!
+I had to set `sandbox` to false for nix to work. You can read in the nix manual more about what this option means.
 ```
 mkdir $BBLROOT/etc/nix
 cat <<EOF > $BBLROOT/etc/nix/nix.conf
 sandbox = false
 EOF
+```
 
-cat <<EOF >> $BBLROOT/etc/passwd
+I had to manually create the group and users (since the nix install script creates these using `sudo`, which isn't installed on our machine).
+```
+cat <<EOF >> $BBLROOT/etc/groups
 nixbld:x:1000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30
 EOF
 
@@ -296,7 +339,7 @@ Go home
 ```
 cd ~
 ```
-Create your .bashrc file
+Create your .bashrc file (I added some color to the PS1 variable here)
 ```
 cat <<EOF > .bashrc
 export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w \[\033[0m\]$ "
@@ -309,8 +352,10 @@ Add home manager
 nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
 nix-channel --update
 ```
-There is a bug that makes some home manager paths conflict with nix' paths, so set nix priority here.
+There is a bug that makes some home manager paths conflict with the nix paths, so set nix priority here.
+
 You need to change the command below so that it uses the version of nix that is installed on your system here.
+
 To find which nix version you have installed just run `nix-env -q`
 ```
 nix-env --set-flag priority 0 nix-2.20.3
@@ -329,9 +374,10 @@ Now your config file is created in `.config/home-manager/home.nix`
 You can edit it with vi inside the chroot (or your editor of choice outside the chroot).
 
 Add the packages you need by entering their name under `home.packages = [`. 
+
 Try to add some package that run in the terminal to see that it works.
-You can search for packages here: https://search.nixos.org
-(please note that you must write `pkgs.` before the package name, for example `pkgs.wpa_supplicant`)
+
+You can search for packages here: https://search.nixos.org (please note that you must write `pkgs.` before the package name, for example `pkgs.wpa_supplicant`)
 
 Apply the config, this will install the packages
 ```
@@ -361,11 +407,14 @@ pkgs.xorg.xf86videoati
 Also don't forget tools such as btrfs-progs (if you use btrfs), an editor, a window manager or a desktop environment, etc.
 
 Since this install doesn't use libinput or libeudev we need Xorg drivers for the keyboard and mouse. Unfortunately the nix package won't build since these driver have been phased out.
+
 They still exist for Debian though, so let's grab them there.
+
 Change user to root (you will copy the files to folders which the regular user can't write to).
 ```
 su
 
+mkdir /lib/xorg
 mkdir ~/xorg-drivers
 pushd ~/xorg-drivers
 KBDURL="http://ftp.us.debian.org/debian/pool/main/x/xserver-xorg-input-keyboard/xserver-xorg-input-kbd_1.9.0-1+b3_amd64.deb"
@@ -519,3 +568,4 @@ To receive an IP address you can now write
 udhcpc -imlan0 /usr/share/udhcpc/default.script
 ```
 Where again you have to change the interface name to match the one you got from `ip link`.
+
