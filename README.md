@@ -275,7 +275,7 @@ EOF
 
 I had to manually create the group and users (since the nix install script creates these using `sudo`, which isn't installed on our machine).
 ```
-cat <<EOF >> $BBLROOT/etc/groups
+cat <<EOF >> $BBLROOT/etc/group
 nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32
 EOF
 
