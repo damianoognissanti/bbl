@@ -276,40 +276,42 @@ EOF
 I had to manually create the group and users (since the nix install script creates these using `sudo`, which isn't installed on our machine).
 ```
 cat <<EOF >> $BBLROOT/etc/groups
-nixbld:x:1000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30
+nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32
 EOF
 
 cat <<EOF >> $BBLROOT/etc/passwd
-nixbld1:x:1000:1000:Linux User,,,:/home/nixbld1:/bin/bash
-nixbld2:x:1001:1000:Linux User,,,:/home/nixbld2:/bin/bash
-nixbld3:x:1002:1000:Linux User,,,:/home/nixbld3:/bin/bash
-nixbld4:x:1003:1000:Linux User,,,:/home/nixbld4:/bin/bash
-nixbld5:x:1004:1000:Linux User,,,:/home/nixbld5:/bin/bash
-nixbld6:x:1005:1000:Linux User,,,:/home/nixbld6:/bin/bash
-nixbld7:x:1006:1000:Linux User,,,:/home/nixbld7:/bin/bash
-nixbld8:x:1007:1000:Linux User,,,:/home/nixbld8:/bin/bash
-nixbld9:x:1008:1000:Linux User,,,:/home/nixbld9:/bin/bash
-nixbld10:x:1009:1000:Linux User,,,:/home/nixbld10:/bin/bash
-nixbld11:x:1010:1000:Linux User,,,:/home/nixbld11:/bin/bash
-nixbld12:x:1011:1000:Linux User,,,:/home/nixbld12:/bin/bash
-nixbld13:x:1012:1000:Linux User,,,:/home/nixbld13:/bin/bash
-nixbld14:x:1013:1000:Linux User,,,:/home/nixbld14:/bin/bash
-nixbld15:x:1014:1000:Linux User,,,:/home/nixbld15:/bin/bash
-nixbld16:x:1015:1000:Linux User,,,:/home/nixbld16:/bin/bash
-nixbld17:x:1016:1000:Linux User,,,:/home/nixbld17:/bin/bash
-nixbld18:x:1017:1000:Linux User,,,:/home/nixbld18:/bin/bash
-nixbld19:x:1018:1000:Linux User,,,:/home/nixbld19:/bin/bash
-nixbld20:x:1019:1000:Linux User,,,:/home/nixbld20:/bin/bash
-nixbld21:x:1020:1000:Linux User,,,:/home/nixbld21:/bin/bash
-nixbld22:x:1021:1000:Linux User,,,:/home/nixbld22:/bin/bash
-nixbld23:x:1022:1000:Linux User,,,:/home/nixbld23:/bin/bash
-nixbld24:x:1023:1000:Linux User,,,:/home/nixbld24:/bin/bash
-nixbld25:x:1024:1000:Linux User,,,:/home/nixbld25:/bin/bash
-nixbld26:x:1025:1000:Linux User,,,:/home/nixbld26:/bin/bash
-nixbld27:x:1026:1000:Linux User,,,:/home/nixbld27:/bin/bash
-nixbld28:x:1027:1000:Linux User,,,:/home/nixbld28:/bin/bash
-nixbld29:x:1028:1000:Linux User,,,:/home/nixbld29:/bin/bash
-nixbld30:x:1029:1000:Linux User,,,:/home/nixbld30:/bin/bash
+nixbld1:x:30001:30000:Nix build user 1 nixbld1:/var/empty:/sbin/nologin
+nixbld2:x:30002:30000:Nix build user 2 nixbld2:/var/empty:/sbin/nologin
+nixbld3:x:30003:30000:Nix build user 3 nixbld3:/var/empty:/sbin/nologin
+nixbld4:x:30004:30000:Nix build user 4 nixbld4:/var/empty:/sbin/nologin
+nixbld5:x:30005:30000:Nix build user 5 nixbld5:/var/empty:/sbin/nologin
+nixbld6:x:30006:30000:Nix build user 6 nixbld6:/var/empty:/sbin/nologin
+nixbld7:x:30007:30000:Nix build user 7 nixbld7:/var/empty:/sbin/nologin
+nixbld8:x:30008:30000:Nix build user 8 nixbld8:/var/empty:/sbin/nologin
+nixbld9:x:30009:30000:Nix build user 9 nixbld9:/var/empty:/sbin/nologin
+nixbld10:x:30010:30000:Nix build user 10 nixbld10:/var/empty:/sbin/nologin
+nixbld11:x:30011:30000:Nix build user 11 nixbld11:/var/empty:/sbin/nologin
+nixbld12:x:30012:30000:Nix build user 12 nixbld12:/var/empty:/sbin/nologin
+nixbld13:x:30013:30000:Nix build user 13 nixbld13:/var/empty:/sbin/nologin
+nixbld14:x:30014:30000:Nix build user 14 nixbld14:/var/empty:/sbin/nologin
+nixbld15:x:30015:30000:Nix build user 15 nixbld15:/var/empty:/sbin/nologin
+nixbld16:x:30016:30000:Nix build user 16 nixbld16:/var/empty:/sbin/nologin
+nixbld17:x:30017:30000:Nix build user 17 nixbld17:/var/empty:/sbin/nologin
+nixbld18:x:30018:30000:Nix build user 18 nixbld18:/var/empty:/sbin/nologin
+nixbld19:x:30019:30000:Nix build user 19 nixbld19:/var/empty:/sbin/nologin
+nixbld20:x:30020:30000:Nix build user 20 nixbld20:/var/empty:/sbin/nologin
+nixbld21:x:30021:30000:Nix build user 21 nixbld21:/var/empty:/sbin/nologin
+nixbld22:x:30022:30000:Nix build user 22 nixbld22:/var/empty:/sbin/nologin
+nixbld23:x:30023:30000:Nix build user 23 nixbld23:/var/empty:/sbin/nologin
+nixbld24:x:30024:30000:Nix build user 24 nixbld24:/var/empty:/sbin/nologin
+nixbld25:x:30025:30000:Nix build user 25 nixbld25:/var/empty:/sbin/nologin
+nixbld26:x:30026:30000:Nix build user 26 nixbld26:/var/empty:/sbin/nologin
+nixbld27:x:30027:30000:Nix build user 27 nixbld27:/var/empty:/sbin/nologin
+nixbld28:x:30028:30000:Nix build user 28 nixbld28:/var/empty:/sbin/nologin
+nixbld29:x:30029:30000:Nix build user 29 nixbld29:/var/empty:/sbin/nologin
+nixbld30:x:30030:30000:Nix build user 30 nixbld30:/var/empty:/sbin/nologin
+nixbld31:x:30031:30000:Nix build user 31 nixbld31:/var/empty:/sbin/nologin
+nixbld32:x:30032:30000:Nix build user 32 nixbld32:/var/empty:/sbin/nologin
 EOF
 ```
 
