@@ -233,7 +233,7 @@ EOF
 ```
 With this you should be able to reboot into your system!
 
-## Chapter 4 Firmware (optional)
+## Chapter 4 Firmware (quasi-optional)
 You will probably need firmware for your wifi card, sound, etc. and the easiest way to solve this is to grab every firmware you need from kernel.org using git
 ```
 git clone depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
@@ -262,16 +262,8 @@ rm -rf staticbash
 popd
 ```
 
-## Chapter 6 Package manager (optional)
+## Chapter 6 Nix package manager (optional)
 First, you need to install bash (see previous chapter) and change `/bin/sh` to `/bin/bash` in `/etc/passwd` for this to work!
-
-I had to set `sandbox` to false for nix to work. You can read in the nix manual more about what this option means.
-```
-mkdir $BBLROOT/etc/nix
-cat <<EOF > $BBLROOT/etc/nix/nix.conf
-sandbox = false
-EOF
-```
 
 I had to manually create the group and users (since the nix install script creates these using `sudo`, which isn't installed on our machine).
 ```
@@ -315,11 +307,6 @@ nixbld32:x:30032:30000:Nix build user 32 nixbld32:/var/empty:/sbin/nologin
 EOF
 ```
 
-Download nix install script
-```
-wget https://nixos.org/nix/install -O $BBLROOT/home/$USERNAME/install
-```
-
 Chroot into the installation
 `arch-chroot /mnt` (or use the steps above for a manual chroot).
 
@@ -361,8 +348,19 @@ export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w
 source /home/$USERNAME/.nix-profile/etc/profile.d/nix.sh
 EOF
 ```
+Download nix install script
+```
+wget https://nixos.org/nix/install -O install
+```
+Run the nix install script you downloaded
+```
+chmod +x install
+./install
+```
+You can now install programs with `nix-env -iA nixpkgs.PKGNAME`
 
-Add home manager
+### Home manager (optional)
+Add the home manager channel:
 ```
 nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
 nix-channel --update
@@ -425,6 +423,8 @@ Since this install doesn't use libinput or libeudev we need Xorg drivers for the
 
 They still exist for Debian though (do adjust the links and checksums if they are too old), so let's grab them there.
 
+First though, make sure your kernel was compiled with `CONFIG_INPUT_MOUSEDEV=y`, otherwise it won't work.
+
 Change user to root (you will copy the files to folders which the regular user can't write to).
 ```
 su
@@ -453,8 +453,14 @@ popd
 rm -rf ~/xorg-drivers
 ```
 
-Add a config for mouse and keyboard. Unfortunately you must add the path to the nix-installed xorg's modules, which means this must be updates manually each time the path changes.
-Type `ls /nix/store/*xorg-server*` to find the path to the folder that contains the `lib` folder. For me it was `/nix/store/hf4rbbcdzgl1nbz4nv8hgwjjl7q8flnn-xorg-server-21.1.11`. Change the `ModulePath` below to the folder you get by this command.
+Now, find the modules used for xorg and copy them to `/lib/xorg/`
+
+```
+cp -arv /nix/store/hf4rbbcdzgl1nbz4nv8hgwjjl7q8flnn-xorg-server-21.1.11/lib/xorg/* /lib/xorg/
+```
+Type `ls /nix/store/*xorg-server*` to find the path to the folder that contains the `lib` folder.
+
+Since your xorg config relies on not finding stuff automatically, you must point to the directory in which the modules exist. If you point to the folder in the nix store you might enounter problems later on when you update xorg since the path is broken. Copying everything to `/lib/xorg/` allows you to use the old modules when you have updated xorg and decide when you wish to update the xorg modules (manually).
 
 ```
 mkdir -p /etc/X11/xorg.conf.d/
@@ -464,7 +470,6 @@ Section "ServerFlags"
 EndSection
 
 Section "Files"
-	ModulePath   "/nix/store/hf4rbbcdzgl1nbz4nv8hgwjjl7q8flnn-xorg-server-21.1.11/lib/xorg/modules"
 	ModulePath   "/lib/xorg/modules/"
 EndSection
 
@@ -482,6 +487,8 @@ EOF
 
 The final step is to add the file `.xinitrc` to your user's home directory. The content of the file depends on which window manager or desktop environment you wish to start. An example for i3 is just the line `exec i3`.
 
+If you have a high DPI monitor and wish to use i3 you have to create the file `.Xresources` with the line `Xft.dpi: 256` (change 256 to the appropriate value by testing a couple of times). You also need to add the line `xrdb -merge .Xresources` before `exec i3` in the `.xinitrc` file.
+
 This should be it. Reboot into your new machine, login, type `startx` and you should have everything set up. If you wish to log in to your window manager directly after login (without typing `startx`) you can add a file named `.bash_profile` to your home folder with the following lines:
 
 ```
@@ -491,26 +498,17 @@ if [ -z "${DISPLAY}" ] && [ $(tty) == "/dev/tty1" ]; then
 fi
 ```
 
-## Chapter 8 WiFi (optional)
-First install `wpa_supplicant` via home-manager when you are chrooted into your bbl-installation (so that you have an internet connection). 
-Now run 
-```
-wpa_passphrase YOUR_SSID > wpa.conf
-```
-Where YOUR_SSID is the "name" of your connection. You will be prompted for the password, so have it nearby.
+## Chapter 8 Ethernet or WiFi (optional)
+### Ethernet
+For ethernet you write `ip link` to find the name of your connection, for example `eth0`. 
+Write `iconf eth0 up` to start it.
 
-With the command `ip link` you can see the name of your wifi interface (it might be `wlan0`, `mlan0`, or something similar).
+### IP-adress with udhcpc
+Now you need an IP address. You can use the script below for that.
 
-To connect you run
-```
-wpa_supplicant -imlan0 -cwpa.conf &
-```
-as the root user, where you substitute mlan0 for the name of your wifi interface.
+N.B.! The script below must be stored in `/usr/share/udhcpc/default.script` and make sure you make it executable with `chmod +x /usr/share/udhcpc/default.script`, otherwise it won't work!
 
-Now you need an IP address. For this you can use the following script (remember to check that $BBLROOT is set before running this):
 ```
-mkdir -p $BBLROOT/usr/share/udhcpc/
-cat <<EOF > $BBLROOT/usr/share/udhcpc/default.script 
 #!/bin/sh
 # udhcpc script edited by Tim Riker <Tim at Rikers.org>
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
@@ -574,13 +572,26 @@ case "$1" in
 		;;
 esac
 exit 0
-EOF
-
-
 ```
-To receive an IP address you can now write
+When the script is stored in the correct place and is executable you receive an IP address by running:
 ```
-udhcpc -imlan0 /usr/share/udhcpc/default.script
+udhcpc
 ```
-Where again you have to change the interface name to match the one you got from `ip link`.
 
+### WiFi
+For WiFi first install `wpa_supplicant` via the nix package manager when you are chrooted into your bbl-installation (so that you have an internet connection). 
+Now run 
+```
+wpa_passphrase YOUR_SSID > wpa.conf
+```
+Where YOUR_SSID is the "name" of your connection. You will be prompted for the password, so have it nearby.
+
+With the command `ip link` you can see the name of your wifi interface (it might be `wlan0`, `mlan0`, or something similar).
+
+To connect you run
+```
+wpa_supplicant -imlan0 -cwpa.conf &
+```
+as the root user, where you substitute mlan0 for the name of your wifi interface.
+
+Follow the steps above (section **IP-adress with udhcpc**) to receive an IP adress.
