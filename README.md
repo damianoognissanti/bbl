@@ -401,7 +401,6 @@ home-manager switch
 
 Here is a sample for a working Xorg
 ```
-pkgs.wpa_supplicant
 pkgs.xorg.setxkbmap
 pkgs.xorg.xauth
 pkgs.xorg.xinit
@@ -423,7 +422,7 @@ Since this install doesn't use libinput or libeudev we need Xorg drivers for the
 
 They still exist for Debian though (do adjust the links and checksums if they are too old), so let's grab them there.
 
-First though, make sure your kernel was compiled with `CONFIG_INPUT_MOUSEDEV=y`, otherwise it won't work.
+First though, make sure your kernel was compiled with `CONFIG_INPUT_MOUSEDEV=y`, otherwise the mouse won't work.
 
 Change user to root (you will copy the files to folders which the regular user can't write to).
 ```
