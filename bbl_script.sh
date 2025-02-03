@@ -63,6 +63,7 @@ tty4::askfirst:/bin/getty 38400 tty4
 ::sysinit:/bin/chmod 660 /dev/tty*
 ::sysinit:/bin/chown root:input /dev/input/*
 ::sysinit:/bin/chmod 660 /dev/input/*
+::sysinit:/bin/ln -s /proc/self/fd /dev/fd
 ::ctrlaltdel:/bin/reboot
 ::shutdown:/bin/echo SHUTTING DOWN
 ::shutdown:/bin/swapoff -a
@@ -172,10 +173,6 @@ nixbld30:x:30030:30000:Nix build user 30 nixbld30:/var/empty:/sbin/nologin
 nixbld31:x:30031:30000:Nix build user 31 nixbld31:/var/empty:/sbin/nologin
 nixbld32:x:30032:30000:Nix build user 32 nixbld32:/var/empty:/sbin/nologin
 EOF
-
-chown $USERNAME -R $BBLROOT/home/$USERNAME
-mkdir -m 0755 $BBLROOT/nix
-chown $USERNAME $BBLROOT/nix
 
 # SETUP DPI CONFIG AND XINITRC TO START I3
 cat <<EOF > $BBLROOT/home/$USERNAME/.Xresources
@@ -316,6 +313,11 @@ cp /etc/resolv.conf $BBLROOT/etc/
 # INSTALL NIX PACKAGE MANAGER
 chroot /mnt /bin/sh <<EOF
 source /etc/environment
+chown $USERNAME -R /home/$USERNAME
+mkdir -m 0755 /nix
+chown $USERNAME /nix
+chown $USERNAME -R /tmp
+
 su - $USERNAME -c "wget https://nixos.org/nix/install"
 su - $USERNAME -c "chmod +x install"
 su - $USERNAME -c "./install"
@@ -355,11 +357,10 @@ su - $USERNAME -c "nix-env -iA nixpkgs.brave"
 su - $USERNAME -c "nix-env -iA nixpkgs.keepassxc"
 su - $USERNAME -c "nix-env -iA nixpkgs.btrfs-progs"
 
-EOF
-
 # COPY XORG FILES
-cp -arv $BBLROOT/nix/store/*xorg-server*/lib/xorg/* $BBLROOT/lib/xorg
+cp -arv /nix/store/*xorg-server*/lib/xorg/* /lib/xorg
+# JUST IN CASE 
+chown $USERNAME -R /home/$USERNAME
 
-chown $USERNAME -R $BBLROOT/home/$USERNAME
-chown $USERNAME -R /tmp
+EOF
 
