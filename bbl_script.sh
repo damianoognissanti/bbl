@@ -275,17 +275,17 @@ EOF
 
 # INSTALL MOUSE AND KEYBOARD
 mkdir -p "$BBLROOT/lib/xorg"
-mkdir -p xorg-drivers/kb
-mkdir -p xorg-drivers/mouse
+mkdir -p "$BBLROOT/xorg-drivers/kb"
+mkdir -p "$BBLROOT/xorg-drivers/mouse"
 
-cd xorg-drivers/kb
+cd "$BBLROOT/xorg-drivers/kb"
 wget "$KBDURL" -O kbd.deb
 echo "$KBDSHASUM" | sha256sum -c
 ar -x kbd.deb
 tar xvf data.tar.xz
 cp -a usr/lib/xorg/* "$BBLROOT/lib/xorg/"
 
-cd ../mouse
+cd "$BBLROOT/xorg-drivers/mouse"
 wget "$MOUSEURL" -O mouse.deb
 echo "$MOUSESHASUM" | sha256sum -c
 ar -x mouse.deb
