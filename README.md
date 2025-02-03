@@ -2,8 +2,10 @@
 ### Because sometimes everything you need is a statically built busybox.
 
 TL;DR. Just for fun I tried to see how little was needed to boot into Linux. I compiled a kernel and a statically linked busybox and that was enough! 
- 
+
 Remember, everything below is just a suggestion on how things can be done, adjust to your needs.
+
+I have added a script called `bbl_script.sh` that will perform all steps below.
 
 *And be careful before you type any command into the terminal. Try to learn what each command does before running it.*
 
@@ -155,7 +157,7 @@ Run `cat $BBLROOT/etc/group` to see that the `USERNAME` variable has been insert
 Create the file containing the users.
 ```
 cat <<EOF > $BBLROOT/etc/passwd
-root:x:0:0:root:/root:/bin/bash
+root:x:0:0:root:/root:/bin/sh
 $USERNAME:x:1030:1030:Linux User,,,:/home/$USERNAME:/bin/sh
 EOF
 ```
@@ -188,7 +190,7 @@ mount --rbind /sys $BBLROOT/sys
 mount --make-rslave $BBLROOT/sys
 mount --rbind /tmp $BBLROOT/tmp
 mount --bind /run $BBLROOT/run
-chroot $BUILDROOT /bin/bash
+chroot $BUILDROOT /bin/sh
 ```
 You need to source your environment, otherwise running commands will just yield: `/bin/sh: ls: not found`.
 ```
@@ -243,28 +245,7 @@ cp -a linux-firmware/* $BBLROOT/lib/firmware
 But there is unfortunately more to this, so read this page: https://www.linuxfromscratch.org/blfs/view/svn/postlfs/firmware.html for more information.
 This is a bit tricky and you might have to add `modprobe` lines to the `inittab` file mentioned above for it to work (after you have downloaded the firmware to the correct folder and recompiled the kernel with the features added).
 
-## Chapter 5 Bash (optional)
-I am used to bash and for some of the other optional steps (like installing nix) bash is required, so here are steps to install bash. Thi This is more easily done on the host machine (the one you build bbl with before). If you have already rebooted into your bbl install and return to the host machine, please remember to mount everything once more and set variables such as `BBLROOT` again.
-
-Download static bash (do adjust the link and checksum if it's too old), put it in `/bin` and test checksum
-```
-mkdir staticbash
-pushd staticbash
-BASHURL="http://ftp.us.debian.org/debian/pool/main/b/bash/bash-static_5.2.15-2+b2_amd64.deb"
-BASHSHASUM="ee9b003975406c46669cbdf1d75c237a2ebf5a5ec241c4c6fd7bda8c88d7e05c  bash-static.deb"
-wget $BASHURL -O bash-static.deb 
-echo "$BASHSHASUM" | sha256sum -c
-ar -x bash-static.deb
-tar xvf data.tar.xz
-chmod +x bin/bash-static
-mv bin/bash-static $BBLROOT/bin/bash
-rm -rf staticbash
-popd
-```
-
-## Chapter 6 Nix package manager (optional)
-First, you need to install bash (see previous chapter) and change `/bin/sh` to `/bin/bash` in `/etc/passwd` for this to work!
-
+## Chapter 5 Nix package manager (optional)
 I had to manually create the group and users (since the nix install script creates these using `sudo`, which isn't installed on our machine).
 ```
 cat <<EOF >> $BBLROOT/etc/group
@@ -341,9 +322,9 @@ Go home
 ```
 cd ~
 ```
-Create your .bashrc file (I added some color to the PS1 variable here)
+Create your .profile file (I added some color to the PS1 variable here)
 ```
-cat <<EOF > .bashrc
+cat <<EOF > .profile
 export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w \[\033[0m\]$ "
 source /home/$USERNAME/.nix-profile/etc/profile.d/nix.sh
 EOF
@@ -397,7 +378,7 @@ Apply the config, this will install the packages
 home-manager switch
 ```
 
-## Chapter 7 Xorg (optional)
+## Chapter 6 Xorg (optional)
 
 Here is a sample for a working Xorg
 ```
@@ -488,7 +469,7 @@ The final step is to add the file `.xinitrc` to your user's home directory. The 
 
 If you have a high DPI monitor and wish to use i3 you have to create the file `.Xresources` with the line `Xft.dpi: 256` (change 256 to the appropriate value by testing a couple of times). You also need to add the line `xrdb -merge .Xresources` before `exec i3` in the `.xinitrc` file.
 
-This should be it. Reboot into your new machine, login, type `startx` and you should have everything set up. If you wish to log in to your window manager directly after login (without typing `startx`) you can add a file named `.bash_profile` to your home folder with the following lines:
+This should be it. Reboot into your new machine, login, type `startx` and you should have everything set up. If you wish to log in to your window manager directly after login (without typing `startx`) you can add this to your `.profile` file:
 
 ```
 # Run startx if on tty1
@@ -497,7 +478,7 @@ if [ -z "${DISPLAY}" ] && [ $(tty) == "/dev/tty1" ]; then
 fi
 ```
 
-## Chapter 8 Ethernet or WiFi (optional)
+## Chapter 7 Ethernet or WiFi (optional)
 ### Ethernet
 For ethernet you write `ip link` to find the name of your connection, for example `eth0`. 
 Write `iconf eth0 up` to start it.
