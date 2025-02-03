@@ -1,3 +1,6 @@
+#!/bin/sh
+set -e  # Exit immediately if a command exits with a non-zero status
+
 # SET VARIABLES
 DATE=$(date +"%Y%m%d_%H%M")
 BUILDNAME="bbl_$DATE"
@@ -15,39 +18,30 @@ MOUSEURL="http://ftp.us.debian.org/debian/pool/main/x/xserver-xorg-input-mouse/x
 MOUSESHASUM="1933b81d9a4923e7c57473ece42e6124be850f3353954c558b1ad74aab25a20d  mouse.deb"
 
 # CREATE SUBVOLUME
-mkdir -p Mount
-mount $RDRIVE Mount
-btrfs subvolume create Mount/$BUILDNAME
-umount Mount
+mkdir -p "Mount"
+mount "$RDRIVE" "Mount"
+btrfs subvolume create "Mount/$BUILDNAME"
+umount "Mount"
 
 # CREATE FOLDER HIERARCHY
-mount $RDRIVE -osubvol=$BUILDNAME $BBLROOT 
-mkdir $BBLROOT/boot
-mkdir $BBLROOT/bin
-mkdir $BBLROOT/etc
-mkdir $BBLROOT/dev
-mkdir $BBLROOT/lib
-mkdir $BBLROOT/root
-mkdir $BBLROOT/home
-mkdir $BBLROOT/sys
-mkdir $BBLROOT/run
-mkdir $BBLROOT/proc
-mkdir $BBLROOT/tmp
-mkdir $BBLROOT/mnt
-mkdir $BBLROOT/var
-mkdir $BBLROOT/home/$USERNAME
-mkdir $BBLROOT/var/log
+mount "$RDRIVE" -osubvol="$BUILDNAME" "$BBLROOT"
+mkdir -p "$BBLROOT/boot" "$BBLROOT/bin" "$BBLROOT/etc" "$BBLROOT/dev" "$BBLROOT/lib" \
+         "$BBLROOT/root" "$BBLROOT/home" "$BBLROOT/sys" "$BBLROOT/run" "$BBLROOT/proc" \
+         "$BBLROOT/tmp" "$BBLROOT/mnt" "$BBLROOT/var" "$BBLROOT/var/log"
+mkdir -p "$BBLROOT/home/$USERNAME"
 
 # INSTALL BUSYBOX
-cd $BBLROOT/bin/
-wget $BUSYBOXURL 
+cd "$BBLROOT/bin/"
+wget "$BUSYBOXURL"
 echo "$BUSYBOXSHASUM" | sha256sum -c
 chmod +x busybox
-for prog in $(./busybox --list); do ln -s busybox $prog; done
+for prog in $(./busybox --list); do
+    ln -s busybox "$prog"
+done
 chmod +s su
 
 # CREATE INITTAB
-cat <<EOF > $BBLROOT/etc/inittab
+cat <<EOF > "$BBLROOT/etc/inittab"
 tty1::respawn:/bin/getty 38400 tty1
 tty2::askfirst:/bin/getty 38400 tty2
 tty3::askfirst:/bin/getty 38400 tty3
@@ -71,7 +65,7 @@ tty4::askfirst:/bin/getty 38400 tty4
 EOF
 
 # CREATE FSTAB
-cat <<EOF > $BBLROOT/etc/fstab
+cat <<EOF > "$BBLROOT/etc/fstab"
 $BDRIVE /boot              vfat       defaults            0     2
 $RDRIVE /              btrfs      rw,relatime,subvol=/$BUILDNAME 0     1
 proc                                        /proc          proc       nosuid,noexec,nodev            0     0
@@ -85,12 +79,12 @@ efivarfs                                    /sys/firmware/efi/efivars efivarfs d
 EOF
 
 # SET HOSTNAME
-cat <<EOF > $BBLROOT/etc/hostname
+cat <<EOF > "$BBLROOT/etc/hostname"
 busyboxlinux
 EOF
 
 # CREATE GROUPS
-cat <<EOF > $BBLROOT/etc/group
+cat <<EOF > "$BBLROOT/etc/group"
 root:x:0:
 tty:x:5:$USERNAME
 audio:x:11:$USERNAME
@@ -102,31 +96,29 @@ $USERNAME:x:1030:
 EOF
 
 # CREATE USERS
-cat <<EOF > $BBLROOT/etc/passwd
+cat <<EOF > "$BBLROOT/etc/passwd"
 root:x:0:0:root:/root:/bin/sh
 $USERNAME:x:1030:1030:Linux User,,,:/home/$USERNAME:/bin/sh
 EOF
 
 # SET PASSWORDS (BOTH ARE SET TO bbl)
-cat <<EOF > $BBLROOT/etc/shadow
+cat <<EOF > "$BBLROOT/etc/shadow"
 root:$y$j9T$82GPlTw.R0C2fLI4xWvZn.$u2mW6Ln/Qy8kxjMaNrpLvFTwQj54tlVd/u20UjYmzG/:20005::::::
 $USERNAME:$y$j9T$82GPlTw.R0C2fLI4xWvZn.$u2mW6Ln/Qy8kxjMaNrpLvFTwQj54tlVd/u20UjYmzG/:20005::::::
 EOF
 
 # CREATE ENVIRONMENT
-cat <<EOF > $BBLROOT/etc/environment
+cat <<EOF > "$BBLROOT/etc/environment"
 PATH="/bin"
 EOF
 
 # INSTALL KERNEL
-# Depends on your setup, I just copy the one I have installed
-cp -ar /lib/modules/ $BBLROOT/lib/
+cp -ar /lib/modules/ "$BBLROOT/lib/"
 # INSTALL FIRMWARE
-# Depends on your setup, I just copy the ones I have installed
-cp -ar /lib/firmware/ $BBLROOT/lib/
+cp -ar /lib/firmware/ "$BBLROOT/lib/"
 
 # CREATE BOOTLOADER ENTRY
-cat <<EOF > /boot/loader/entries/$BUILDNAME.conf
+cat <<EOF > /boot/loader/entries/"$BUILDNAME".conf
 title   BBL
 linux   /vmlinuz
 options root=$RDRIVE rootflags=subvol=$BUILDNAME rw rootfstype=btrfs
@@ -134,12 +126,12 @@ EOF
 
 # NIX
 # Add group
-cat <<EOF >> $BBLROOT/etc/group
+cat <<EOF >> "$BBLROOT/etc/group"
 nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32
 EOF
 
 # Add users
-cat <<EOF >> $BBLROOT/etc/passwd
+cat <<EOF >> "$BBLROOT/etc/passwd"
 nixbld1:x:30001:30000:Nix build user 1 nixbld1:/var/empty:/sbin/nologin
 nixbld2:x:30002:30000:Nix build user 2 nixbld2:/var/empty:/sbin/nologin
 nixbld3:x:30003:30000:Nix build user 3 nixbld3:/var/empty:/sbin/nologin
@@ -175,23 +167,23 @@ nixbld32:x:30032:30000:Nix build user 32 nixbld32:/var/empty:/sbin/nologin
 EOF
 
 # SETUP DPI CONFIG AND XINITRC TO START I3
-cat <<EOF > $BBLROOT/home/$USERNAME/.Xresources
+cat <<EOF > "$BBLROOT/home/$USERNAME/.Xresources"
 Xft.dpi: 256
 EOF
 
-cat <<EOF > $BBLROOT/home/$USERNAME/.xinitrc
+cat <<EOF > "$BBLROOT/home/$USERNAME/.xinitrc"
 xrdb -merge .Xresources
 exec i3
 EOF
 
 # COPY I3 CONFIG
-mkdir $BBLROOT/home/$USERNAME/.config
-cp -ar /home/$USERNAME/.config/i3 $BBLROOT/home/$USERNAME/.config/i3 
+mkdir -p "$BBLROOT/home/$USERNAME/.config"
+cp -ar "/home/$USERNAME/.config/i3" "$BBLROOT/home/$USERNAME/.config/i3"
 
 ### IP-adress with udhcpc
-mkdir -p $BBLROOT/usr/share/udhcpc/
+mkdir -p "$BBLROOT/usr/share/udhcpc/"
 
-cat <<'EOF'> $BBLROOT/usr/share/udhcpc/default.script
+cat <<'EOF' > "$BBLROOT/usr/share/udhcpc/default.script"
 #!/bin/sh
 # udhcpc script edited by Tim Riker <Tim at Rikers.org>
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
@@ -257,11 +249,11 @@ esac
 exit 0
 EOF
 
-chmod +x $BBLROOT/usr/share/udhcpc/default.script
+chmod +x "$BBLROOT/usr/share/udhcpc/default.script"
 
 # SETUP XORG
-mkdir -p $BBLROOT/etc/X11/xorg.conf.d/
-cat <<EOF > $BBLROOT/etc/X11/xorg.conf.d/00-mousekbd.conf
+mkdir -p "$BBLROOT/etc/X11/xorg.conf.d/"
+cat <<EOF > "$BBLROOT/etc/X11/xorg.conf.d/00-mousekbd.conf"
 Section "ServerFlags"
         Option "AutoAddDevices" "False"
 EndSection
@@ -282,85 +274,83 @@ EndSection
 EOF
 
 # INSTALL MOUSE AND KEYBOARD
-mkdir $BBLROOT/lib/xorg
+mkdir -p "$BBLROOT/lib/xorg"
 mkdir -p xorg-drivers/kb
 mkdir -p xorg-drivers/mouse
 
 cd xorg-drivers/kb
-wget $KBDURL -O kbd.deb
+wget "$KBDURL" -O kbd.deb
 echo "$KBDSHASUM" | sha256sum -c
 ar -x kbd.deb
 tar xvf data.tar.xz
-cp -a usr/lib/xorg/* $BBLROOT/lib/xorg/
+cp -a usr/lib/xorg/* "$BBLROOT/lib/xorg/"
 
 cd ../mouse
 wget "$MOUSEURL" -O mouse.deb
 echo "$MOUSESHASUM" | sha256sum -c
 ar -x mouse.deb
 tar xvf data.tar.xz
-cp -a usr/lib/xorg/* $BBLROOT/lib/xorg/
+cp -a usr/lib/xorg/* "$BBLROOT/lib/xorg/"
 
 # SETUP CHROOT
-mount --rbind /dev $BBLROOT/dev
-mount --make-rslave $BBLROOT/dev
-mount -t proc /proc $BBLROOT/proc
-mount --rbind /sys $BBLROOT/sys
-mount --make-rslave $BBLROOT/sys
-mount --rbind /tmp $BBLROOT/tmp
-mount --bind /run $BBLROOT/run
-cp /etc/resolv.conf $BBLROOT/etc/
+mount --rbind /dev "$BBLROOT/dev"
+mount --make-rslave "$BBLROOT/dev"
+mount -t proc /proc "$BBLROOT/proc"
+mount --rbind /sys "$BBLROOT/sys"
+mount --make-rslave "$BBLROOT/sys"
+mount --rbind /tmp "$BBLROOT/tmp"
+mount --bind /run "$BBLROOT/run"
+cp /etc/resolv.conf "$BBLROOT/etc/"
 
 # INSTALL NIX PACKAGE MANAGER
-chroot /mnt /bin/sh <<EOF
-source /etc/environment
-chown $USERNAME -R /home/$USERNAME
+chroot "$BBLROOT" /bin/sh <<EOF
+. /etc/environment
+chown "$USERNAME" -R /home/"$USERNAME"
 mkdir -m 0755 /nix
-chown $USERNAME /nix
-chown $USERNAME -R /tmp
+chown "$USERNAME" /nix
+chown "$USERNAME" -R /tmp
 
-su - $USERNAME -c "wget https://nixos.org/nix/install"
-su - $USERNAME -c "chmod +x install"
-su - $USERNAME -c "./install"
+su - "$USERNAME" -c "wget https://nixos.org/nix/install"
+su - "$USERNAME" -c "chmod +x install"
+su - "$USERNAME" -c "./install"
 EOF
 
 # CREATE USER PROFILE
-cat <<EOF > $BBLROOT/home/$USERNAME/.profile
+cat <<EOF > "$BBLROOT/home/$USERNAME/.profile"
 export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w \[\033[0m\]$ "
-source /home/$USERNAME/.nix-profile/etc/profile.d/nix.sh
+. /home/$USERNAME/.nix-profile/etc/profile.d/nix.sh
 EOF
 
 # INSTALL PACKAGES USING NIX
-chroot /mnt /bin/sh <<EOF
-source /etc/environment
+chroot "$BBLROOT" /bin/sh <<EOF
+. /etc/environment
 # INSTALL XORG PACKAGES
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.setxkbmap"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xauth"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xinit"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xinput"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xorgserver"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xrdb"
-su - $USERNAME -c "nix-env -iA nixpkgs.xorg.xf86videonouveau"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.setxkbmap"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xauth"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xinit"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xinput"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xorgserver"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xrdb"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.xorg.xf86videonouveau"
 
 # INSTALL FONTS
-su - $USERNAME -c "nix-env -iA nixpkgs.ubuntu-sans"
-su - $USERNAME -c "nix-env -iA nixpkgs.ubuntu-sans-mono"
-su - $USERNAME -c "nix-env -iA nixpkgs.fontconfig"
-su - $USERNAME -c "fc-cache -fv"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.ubuntu-sans"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.ubuntu-sans-mono"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.fontconfig"
+su - "$USERNAME" -c "fc-cache -fv"
 
 # INSTALL I3
-su - $USERNAME -c "nix-env -iA nixpkgs.i3"
-su - $USERNAME -c "nix-env -iA nixpkgs.i3status"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.i3"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.i3status"
 
 # INSTALL OTHER APPLICATIONS
-su - $USERNAME -c "nix-env -iA nixpkgs.konsole"
-su - $USERNAME -c "nix-env -iA nixpkgs.brave"
-su - $USERNAME -c "nix-env -iA nixpkgs.keepassxc"
-su - $USERNAME -c "nix-env -iA nixpkgs.btrfs-progs"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.konsole"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.brave"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.keepassxc"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.btrfs-progs"
 
 # COPY XORG FILES
 cp -arv /nix/store/*xorg-server*/lib/xorg/* /lib/xorg
 # JUST IN CASE 
-chown $USERNAME -R /home/$USERNAME
-
+chown "$USERNAME" -R /home/"$USERNAME"
 EOF
-
