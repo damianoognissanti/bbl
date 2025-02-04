@@ -317,7 +317,6 @@ EOF
 
 # CREATE USER PROFILE
 cat <<EOF > "$BBLROOT/home/$USERNAME/.profile"
-export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w \[\033[0m\]$ "
 . /home/$USERNAME/.nix-profile/etc/profile.d/nix.sh
 EOF
 
@@ -348,9 +347,26 @@ su - "$USERNAME" -c "nix-env -iA nixpkgs.konsole"
 su - "$USERNAME" -c "nix-env -iA nixpkgs.brave"
 su - "$USERNAME" -c "nix-env -iA nixpkgs.keepassxc"
 su - "$USERNAME" -c "nix-env -iA nixpkgs.btrfs-progs"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.fzf"
+su - "$USERNAME" -c "nix-env -iA nixpkgs.neovim"
 
 # COPY XORG FILES
 cp -arv /nix/store/*xorg-server*/lib/xorg/* /lib/xorg
+EOF
+
+# SOME PERSONAL CONFIGURATIONS
+cat <<'EOF' >> "$BBLROOT/home/$USERNAME/.profile"
+export PS1="\[\e[38;5;30m\]\u\[\e[38;5;31m\]@\[\e[38;5;32m\]\h \[\e[38;5;33m\]\w \[\033[0m\]$ "
+. "$(fzf-share)/key-bindings.bash"
+. "$(fzf-share)/completion.bash"
+alias vim="nvim"
+alias vi="nvim"
+EOF
+
 # JUST IN CASE 
+chroot "$BBLROOT" /bin/sh <<EOF
+. /etc/environment
 chown "$USERNAME" -R /home/"$USERNAME"
+chown "$USERNAME" /nix
+chown "$USERNAME" -R /tmp
 EOF
