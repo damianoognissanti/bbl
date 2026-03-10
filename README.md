@@ -488,7 +488,7 @@ Create an entry in your bootloader. Here is an example for `systemd-boot`:
 cat <<EOF > /boot/loader/entries/$BUILDNAME.conf
 title   BBL $BUILDNAME
 linux   /vmlinuz-$BUILDNAME
-options root=UUID=$UUID rootflags=subvol=$BUILDNAME rw rootfstype=btrfs rootwait net.ifnames=0 biosdevname=0 init=/init console=tty1 loglevel=7 amdgpu.dc=1
+options root=$DRIVE rootflags=subvol=$BUILDNAME rw rootfstype=btrfs rootwait net.ifnames=0 biosdevname=0 init=/init console=tty1 loglevel=7 amdgpu.dc=1
 EOF
 ```
 
