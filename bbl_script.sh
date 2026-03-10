@@ -542,8 +542,7 @@ nix-env -iA \
   nixpkgs.xkeyboard_config \
   nixpkgs.shared-mime-info \
   nixpkgs.wpa_supplicant \
-  nixpkgs.iw \
-  nixpkgs.rfkill
+  nixpkgs.iw
 
 mkdir -p \$HOME/.config/sway
 SWAY_DEFAULT_CONF=\$(find /nix/store -path '*/etc/sway/config' | head -n 1)
