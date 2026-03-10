@@ -477,7 +477,7 @@ mkdir -p "$BOOT_DIR/loader/entries"
 cat > "$BOOT_DIR/loader/entries/$BOOT_ENTRY_NAME" <<EOF
 title   BBL $BUILDNAME
 linux   /$KERNEL_BASENAME
-options root=UUID=$UUID rootflags=subvol=$BUILDNAME rw rootfstype=btrfs rootwait net.ifnames=0 biosdevname=0 init=/init console=tty1 loglevel=7 amdgpu.dc=1
+options root=$DRIVE rootflags=subvol=$BUILDNAME rw rootfstype=btrfs rootwait net.ifnames=0 biosdevname=0 init=/init console=tty1 loglevel=7 amdgpu.dc=1
 EOF
 
 echo "[9/12] Setting ownership before Nix install..."
