@@ -621,8 +621,7 @@ nix-env -iA \
   nixpkgs.xkeyboard_config \
   nixpkgs.shared-mime-info \
   nixpkgs.wpa_supplicant \
-  nixpkgs.iw \
-  nixpkgs.rfkill
+  nixpkgs.iw
 ```
 
 The startup scripts created earlier will now begin to do useful work at boot:
