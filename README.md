@@ -635,6 +635,14 @@ Switch to the user account:
 ```sh
 su "$USERNAME"
 cd ~
+USERNAME="bbl"
+VERSION="2.34.0"
+```
+
+Also make sure the `/tmp` directory is not the host's.
+```sh
+unset TMPDIR
+export TMPDIR=/tmp
 ```
 
 Now unpack and install the already verified tarball:
