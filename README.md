@@ -846,6 +846,7 @@ If you need to do it manually:
 ```sh
 mkdir -p ~/.config/sway
 cp "$(find /nix/store -path '*/etc/sway/config' | head -n 1)" ~/.config/sway/config
+chmod 644 ~/.config/sway/config
 ```
 
 Create a helper to start Sway:
