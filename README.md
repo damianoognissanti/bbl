@@ -400,8 +400,13 @@ mount --make-rslave "$BBLROOT/sys"
 mount --bind /run "$BBLROOT/run"
 cp /etc/resolv.conf "$BBLROOT/etc/"
 chroot "$BBLROOT" /bin/sh
+```
+
+When inside the chroot run
+```sh
 . /etc/profile
 ```
+To make commands such as `ls`, `cd`, etc. available.
 
 A chroot is a nice way to continue building from inside the new system without rebooting every time. But remember that before `chroot` works well, you need to bind in things like `/dev`, `/sys`, `/proc` and `/run`, because the small system still depends on the running host kernel and its mounted interfaces.
 
@@ -595,12 +600,19 @@ Now chroot into the system:
 
 ```sh
 chroot "$BBLROOT" /bin/sh
-. /etc/profile
 ```
 
-Set the USERNAME variable since it doesn't exist inide the chroot:
+When inside the chroot run
+```sh
+. /etc/profile
+```
+To make commands such as `ls`, `cd`, etc. available.
+
+
+Set the USERNAME and VERSION variables since they don't exist inide the chroot:
 ```sh
 USERNAME="bbl"
+VERSION="2.34.0"
 ```
 
 ### Inside the bbl system: prepare the user and install Nix
