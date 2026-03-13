@@ -207,8 +207,8 @@ EOF
 Create profile files (shell startup files that set environment variables):
 
 ```sh
-cat <<'EOF' > "$BBLROOT/etc/profile"
-export PATH="/bin:/usr/bin:/usr/sbin:$PATH"
+cat <<EOF > "$BBLROOT/etc/profile"
+export PATH="/bin:/usr/bin:/usr/sbin:\$PATH"
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 export UUID="$UUID"
@@ -217,6 +217,7 @@ export BBLROOT="$BBLROOT"
 export USERNAME="$USERNAME"
 export DRIVE="$DRIVE"
 EOF
+```
 
 Note that we added the variables `UUID`, `BUILDNAME`, `USERNAME`, `DRIVE` to the `/etc/profile` file so that we have access to the variables if we chroot into the system or reboot into the system later on. You can later add more important variables here.
 
@@ -414,11 +415,10 @@ cp /etc/resolv.conf "$BBLROOT/etc/"
 chroot "$BBLROOT" /bin/sh
 ```
 
-When inside the chroot run
+To set PATH (so BusyBox commands such as `ls` are found) and load the bbl variables, run:
 ```sh
 . /etc/profile
 ```
-To make commands such as `ls`, `cd`, etc. available, and to set important variables.
 
 A chroot is a nice way to continue building from inside the new system without rebooting every time. But remember that before `chroot` works well, you need to bind in things like `/dev`, `/sys`, `/proc` and `/run`, because the small system still depends on the running host kernel and its mounted interfaces.
 
@@ -554,14 +554,13 @@ Since this is a small busybox system without systemd, the easiest route is a sin
 
 There is one important thing to know here: the tiny base system may not yet have the CA certificates needed for HTTPS downloads. Because of that, the simplest and safest way to install Nix the first time is to download and verify the tarball on the host first, then copy it into the bbl system and install it from there.
 
-If you have rebooted the computer or closed the terminal, check if the variables `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` are set by typing `echo $BUILDNAME` etc. 
-If they are not set, you can mount your drive again, find the `/etc/profile` created earlier and run the lines exporting the variables found there, it should look something like:
+If you have rebooted the computer or closed the terminal, you may need to set `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` again on the host before mounting the install. Something like:
 
 ```sh
-export BUILDNAME="bbl_20260313_1200"
-export DRIVE="/dev/nvme0n1p2"
-export BBLROOT="/mnt"
-export USERNAME="bbl"
+BUILDNAME="bbl_20260313_1200"
+DRIVE="/dev/nvme0n1p2"
+BBLROOT="/mnt"
+USERNAME="bbl"
 ```
 
 Then mount your build again (if you have unmounted it previously):
@@ -615,11 +614,10 @@ Now chroot into the system:
 chroot "$BBLROOT" /bin/sh
 ```
 
-When inside the chroot run
+To set PATH (so BusyBox commands such as `ls` are found) and load the bbl variables, run:
 ```sh
 . /etc/profile
 ```
-To make commands such as `ls`, `cd`, etc. available.
 
 ### Inside the bbl system: prepare the user and install Nix
 
@@ -643,7 +641,7 @@ cd ~
 VERSION="2.34.0"
 ```
 
-Also make sure the `/tmp` directory is not the host's.
+Also make sure the variable `TMPDIR` does not point to a stale temporary directory inherited from the host shell.
 ```sh
 unset TMPDIR
 export TMPDIR=/tmp
