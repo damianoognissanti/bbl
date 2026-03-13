@@ -51,7 +51,7 @@ Select a user name:
 USERNAME="bbl"
 ```
 
-If you want to save the variables so that you can set them easily in the future (you probably want this), run:
+If you want to save these variables so you can restore them easily later on the host (which is recommended), run:
 ```sh
 cat > "$HOME/bbl-vars" <<EOF
 export BUILDNAME="$BUILDNAME"
@@ -62,7 +62,7 @@ export USERNAME="$USERNAME"
 EOF
 ```
 
-To load the variables from the file you just run
+To load the variables from the file you just run:
 ```sh
 . "$HOME/bbl-vars"
 ```
@@ -652,7 +652,7 @@ mkdir -m 0755 /nix
 chown "$USERNAME:$USERNAME" /nix
 ```
 
-Switch to the user account and set the VERSION variable since it doesn't exist inide the chroot:
+Switch to the user account and set the VERSION variable since it doesn't exist inside the chroot:
 ```sh
 su "$USERNAME"
 cd ~
