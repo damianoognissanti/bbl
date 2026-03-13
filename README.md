@@ -39,6 +39,11 @@ Store the drive name and UUID in variables. You get these values by typing `blki
 DRIVE="/dev/nvme0n1p2"
 UUID="abc1234d-a123-1234-abc1-12ab34c56789"
 ```
+You can read the value from `blkid` like so
+
+```sh
+UUID="$(blkid -s UUID -o value "$DRIVE")"
+```
 
 Select a user name:
 
@@ -206,7 +211,14 @@ cat <<'EOF' > "$BBLROOT/etc/profile"
 export PATH="/bin:/usr/bin:/usr/sbin:$PATH"
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
+export UUID="$UUID"
+export BUILDNAME="$BUILDNAME"
+export BBLROOT="$BBLROOT"
+export USERNAME="$USERNAME"
+export DRIVE="$DRIVE"
 EOF
+
+Note that we added the variables `UUID`, `BUILDNAME`, `USERNAME`, `DRIVE` to the `/etc/profile` file so that we have access to the variables if we chroot into the system or reboot into the system later on. You can later add more important variables here.
 
 cat <<'EOF' > "$BBLROOT/home/$USERNAME/.profile"
 export PS1='\u@\h:\w\\$ '
@@ -406,7 +418,7 @@ When inside the chroot run
 ```sh
 . /etc/profile
 ```
-To make commands such as `ls`, `cd`, etc. available.
+To make commands such as `ls`, `cd`, etc. available, and to set important variables.
 
 A chroot is a nice way to continue building from inside the new system without rebooting every time. But remember that before `chroot` works well, you need to bind in things like `/dev`, `/sys`, `/proc` and `/run`, because the small system still depends on the running host kernel and its mounted interfaces.
 
@@ -542,13 +554,14 @@ Since this is a small busybox system without systemd, the easiest route is a sin
 
 There is one important thing to know here: the tiny base system may not yet have the CA certificates needed for HTTPS downloads. Because of that, the simplest and safest way to install Nix the first time is to download and verify the tarball on the host first, then copy it into the bbl system and install it from there.
 
-If you have rebooted the computer or closed the terminal, set `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` again. Don't use the command to create a buildname with the date command though, otherwise it's not the same as the one you created earlier, manually set it to what it's supposed to be, something like this:
+If you have rebooted the computer or closed the terminal, check if the variables `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` are set by typing `echo $BUILDNAME` etc. 
+If they are not set, you can mount your drive again, find the `/etc/profile` created earlier and run the lines exporting the variables found there, it should look something like:
 
 ```sh
-BUILDNAME="bbl_20260313_1200"
-DRIVE="/dev/nvme0n1p2"
-BBLROOT="/mnt"
-USERNAME="bbl"
+export BUILDNAME="bbl_20260313_1200"
+export DRIVE="/dev/nvme0n1p2"
+export BBLROOT="/mnt"
+export USERNAME="bbl"
 ```
 
 Then mount your build again (if you have unmounted it previously):
@@ -608,13 +621,6 @@ When inside the chroot run
 ```
 To make commands such as `ls`, `cd`, etc. available.
 
-
-Set the USERNAME and VERSION variables since they don't exist inide the chroot:
-```sh
-USERNAME="bbl"
-VERSION="2.34.0"
-```
-
 ### Inside the bbl system: prepare the user and install Nix
 
 Make sure the user owns the home folder (and the nix tarball):
@@ -630,12 +636,10 @@ mkdir -m 0755 /nix
 chown "$USERNAME:$USERNAME" /nix
 ```
 
-Switch to the user account:
-
+Switch to the user account and set the VERSION variable since it doesn't exist inide the chroot:
 ```sh
 su "$USERNAME"
 cd ~
-USERNAME="bbl"
 VERSION="2.34.0"
 ```
 
