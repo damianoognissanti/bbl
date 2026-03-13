@@ -51,6 +51,22 @@ Select a user name:
 USERNAME="bbl"
 ```
 
+If you want to save the variables so that you can set them easily in the future (you probably want this), run:
+```sh
+cat > "$HOME/bbl-vars" <<EOF
+export BUILDNAME="$BUILDNAME"
+export BBLROOT="$BBLROOT"
+export DRIVE="$DRIVE"
+export UUID="$UUID"
+export USERNAME="$USERNAME"
+EOF
+```
+
+To load the variables from the file you just run
+```sh
+. "$HOME/bbl-vars"
+```
+
 Mount your drive in a folder called `Mount` and create a `btrfs` subvolume. Unmount the drive and mount the subvolume in the `$BBLROOT` folder.
 
 ```sh
@@ -204,23 +220,29 @@ cat <<'EOF' > "$BBLROOT/etc/hosts"
 EOF
 ```
 
-Create profile files (shell startup files that set environment variables):
-
+Create our bbl variable file:
 ```sh
-cat <<EOF > "$BBLROOT/etc/profile"
-export PATH="/bin:/usr/bin:/usr/sbin:\$PATH"
-export LANG=C.UTF-8
-export LC_ALL=C.UTF-8
-export UUID="$UUID"
+cat <<EOF > "$BBLROOT/etc/bbl-vars"
 export BUILDNAME="$BUILDNAME"
-export BBLROOT="$BBLROOT"
-export USERNAME="$USERNAME"
 export DRIVE="$DRIVE"
+export UUID="$UUID"
+export USERNAME="$USERNAME"
 EOF
 ```
 
-Note that we added the variables `UUID`, `BUILDNAME`, `USERNAME`, `DRIVE` to the `/etc/profile` file so that we have access to the variables if we chroot into the system or reboot into the system later on. You can later add more important variables here.
+Create profile files (shell startup files that set environment variables):
+```sh
+cat <<'EOF' > "$BBLROOT/etc/profile"
+export PATH="/bin:/usr/bin:/usr/sbin:$PATH"
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+[ -f /etc/bbl-vars ] && . /etc/bbl-vars
+EOF
+```
 
+Note that we let the `/etc/profile` file load the `/etc/bbl-vars` so that we have access to the variables if we chroot into the system or reboot into the system later on. You can later add more important variables here.
+
+```sh
 cat <<'EOF' > "$BBLROOT/home/$USERNAME/.profile"
 export PS1='\u@\h:\w\\$ '
 export PATH="$HOME/bin:/bin:/usr/bin:/usr/sbin:$PATH"
@@ -554,13 +576,9 @@ Since this is a small busybox system without systemd, the easiest route is a sin
 
 There is one important thing to know here: the tiny base system may not yet have the CA certificates needed for HTTPS downloads. Because of that, the simplest and safest way to install Nix the first time is to download and verify the tarball on the host first, then copy it into the bbl system and install it from there.
 
-If you have rebooted the computer or closed the terminal, you may need to set `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` again on the host before mounting the install. Something like:
-
+If you have rebooted the computer or closed the terminal, you may need to set `BUILDNAME`, `DRIVE`, `BBLROOT` and `USERNAME` again on the host before mounting the install. If you created the bbl-vars file in your home in Chapter 1, just run:
 ```sh
-BUILDNAME="bbl_20260313_1200"
-DRIVE="/dev/nvme0n1p2"
-BBLROOT="/mnt"
-USERNAME="bbl"
+. "$HOME/bbl-vars"
 ```
 
 Then mount your build again (if you have unmounted it previously):
@@ -840,6 +858,8 @@ Now edit `/etc/inittab` and add this line:
 ```sh
 ::once:/bin/sh /usr/sbin/seatd-daemon.sh
 ```
+
+This script is intended to be started by `init` as root. If you start `seatd` manually as a normal user, Sway will usually fail to get control of the VT.
 
 This install copies Sway's original config from the Nix store into the user's home directory, so you start with a proper default config instead of a tiny hand-written one.
 
